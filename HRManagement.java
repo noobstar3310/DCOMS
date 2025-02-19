@@ -1,8 +1,10 @@
 package dcomsassignment;
 
+import java.util.List;
 import java.util.Scanner;
 
 public class HRManagement {
+
     private static Scanner scanner = new Scanner(System.in);
     private HRMService service;
 
@@ -40,23 +42,25 @@ public class HRManagement {
     }
 
     private void registerNewEmployee() throws Exception {
+        Employee np = new Employee();
+
         System.out.println("\n=== Register New Employee ===");
         System.out.print("Enter First Name: ");
-        String firstName = scanner.nextLine();
+        np.setFirstName(scanner.nextLine());
         System.out.print("Enter Last Name: ");
-        String lastName = scanner.nextLine();
+        np.setLastName(scanner.nextLine());
         System.out.print("Enter IC Number: ");
-        String icNumber = scanner.nextLine();
+        np.setIcNumber(scanner.nextLine());
         System.out.print("Enter Phone Number: ");
-        String phone = scanner.nextLine();
+        np.setPhoneNumber(scanner.nextLine());
         System.out.print("Enter Initial Leave Balance (Default is 10): ");
-        double leaveBalance = scanner.nextDouble();
+        np.setLeaveAvailable(scanner.nextDouble());
         scanner.nextLine();
 
         Thread registrationThread = new Thread(() -> {
             try {
                 System.out.println("Processing registration...");
-                boolean registered = service.RegisterEmployee(firstName, lastName, icNumber, leaveBalance, phone);
+                boolean registered = service.RegisterEmployee(np);
                 System.out.println(registered ? "Employee registered successfully!" : "Registration failed.");
             } catch (Exception e) {
                 System.out.println("Registration error: " + e.getMessage());
@@ -70,23 +74,64 @@ public class HRManagement {
         System.out.println("\n=== Manage Leave Applications ===");
         System.out.print("Enter Staff ID to view their leave applications: ");
         int staffId = scanner.nextInt();
-        scanner.nextLine();
+        scanner.nextLine(); // Consume the newline character
 
-        service.displayLeaveStatus(staffId);
+        // Display leave status for the given staff ID
+        List<LeaveRecord> leaveRecords = service.getLeaveStatus(staffId);
+
+        if (leaveRecords.isEmpty()) {
+            System.out.println("No leave applications found for Staff ID: " + staffId);
+            return;
+        }
+
+        // Display leave records
+        System.out.println("\nLeave Applications for Staff ID: " + staffId);
+        for (LeaveRecord record : leaveRecords) {
+            System.out.println("Leave ID: " + record.getLeaveRecordID());
+            System.out.println("Reason: " + record.getReasonOfLeave());
+            System.out.println("Duration: " + record.getDurationOfLeave() + " days");
+            System.out.println("Status: " + record.getStatus());
+            System.out.println("Date: " + record.getLeaveDate());
+            System.out.println("----------------------------");
+        }
 
         System.out.print("Enter Leave Record ID to approve/reject (0 to cancel): ");
         int leaveId = scanner.nextInt();
-        scanner.nextLine();
+        scanner.nextLine(); // Consume the newline character
 
         if (leaveId > 0) {
+            // Check if the leave ID is valid for the given staff ID
+            boolean validLeaveId = false;
+            for (LeaveRecord record : leaveRecords) {
+                if (record.getLeaveRecordID() == leaveId) {
+                    validLeaveId = true;
+                    break;
+                }
+            }
+
+            if (!validLeaveId) {
+                System.out.println("Invalid Leave Record ID for Staff ID: " + staffId);
+                return;
+            }
+
             System.out.println("1. Approve");
             System.out.println("2. Reject");
             System.out.print("Enter choice: ");
             int decision = scanner.nextInt();
-            scanner.nextLine();
+            scanner.nextLine(); // Consume the newline character
 
             String status = (decision == 1) ? "APPROVED" : "REJECTED";
-            System.out.println("Leave application " + status);
+
+            // Call the approveLeave method to update the leave status
+            boolean success = service.approveLeave(leaveId, status);
+
+            if (success) {
+                System.out.println("Leave application " + status + " successfully.");
+            } else {
+                System.out.println("Failed to update leave application status.");
+            }
+        } else {
+            System.out.println("Operation canceled.");
         }
     }
 
@@ -98,7 +143,23 @@ public class HRManagement {
         int year = scanner.nextInt();
         scanner.nextLine();
 
-        service.displayLeaveStatus(staffId);
+        List<LeaveRecord> leaveRecords = service.getLeaveStatus(staffId);
+
+        if (leaveRecords.isEmpty()) {
+            System.out.println("No leave applications found for Staff ID: " + staffId);
+            return;
+        }
+
+        // Display leave records
+        System.out.println("\nLeave Applications for Staff ID: " + staffId);
+        for (LeaveRecord record : leaveRecords) {
+            System.out.println("Leave ID: " + record.getLeaveRecordID());
+            System.out.println("Reason: " + record.getReasonOfLeave());
+            System.out.println("Duration: " + record.getDurationOfLeave() + " days");
+            System.out.println("Status: " + record.getStatus());
+            System.out.println("Date: " + record.getLeaveDate());
+            System.out.println("----------------------------");
+        }
     }
 
     private void removeEmployee() {

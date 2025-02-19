@@ -4,11 +4,12 @@ import java.net.InetAddress;
 import java.rmi.Naming;
 import java.util.Scanner;
 
-public class HRMClientTest {
+public class HRMClient {
     private static Scanner scanner = new Scanner(System.in);
     
     public static void main(String[] args) {
         try {
+            //String serverIP = "172.20.10.2";
             String serverIP = InetAddress.getLocalHost().getHostAddress();
             HRMService service = (HRMService) Naming.lookup("rmi://" + serverIP + "/HRMService");
 

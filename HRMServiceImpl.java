@@ -1,4 +1,3 @@
-
 package dcomsassignment;
 
 import java.rmi.RemoteException;
@@ -16,7 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
+public class HRMServiceImpl extends UnicastRemoteObject implements HRMService {
 //    private Connection conn;
 //
 //    public HRMServiceImpl(Connection conn) throws RemoteException {
@@ -37,6 +36,7 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
 //            e.printStackTrace();
 //        }
 //    }
+
     private static final long serialVersionUID = 1L;
     private Connection conn;
     private final ExecutorService executorService;
@@ -60,16 +60,16 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
     }
 
     // @Override
-    public boolean RegisterEmployee(String firstName, String lastName, String icNumber, double leaveAvailable, String phoneNumber) throws RemoteException {
+    public boolean RegisterEmployee(Employee employee) throws RemoteException {
         try {
             String query = "INSERT INTO Employee (first_name, last_name, ic_number, phone_number, leave_available) VALUES (?, ?, ?, ?, ?)";
             PreparedStatement stmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
 
-            stmt.setString(1, firstName);
-            stmt.setString(2, lastName);
-            stmt.setString(3, icNumber);  // Ensure ic_number is unique
-            stmt.setString(4, phoneNumber);
-            stmt.setDouble(5, leaveAvailable);
+            stmt.setString(1, employee.getFirstName());
+            stmt.setString(2, employee.getLastName());
+            stmt.setString(3, employee.getIcNumber());  // Ensure ic_number is unique
+            stmt.setString(4, employee.getPhoneNumber());
+            stmt.setDouble(5, employee.getLeaveAvailable());
 
             int rowsInserted = stmt.executeUpdate();
 
@@ -92,15 +92,15 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
     }
 
     // @Override
-    public boolean updateEmployeeProfile(int staffId, String firstName, String lastName, String phoneNumber, int ic_number) throws RemoteException {
+    public boolean updateEmployeeProfile(Employee employee) throws RemoteException {
         try {
             String query = "UPDATE Employee SET first_name = ?, last_name = ?, phone_number = ?, ic_number = ? WHERE staffid = ?";
             PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, firstName);
-            stmt.setString(2, lastName);
-            stmt.setString(3, phoneNumber);
-            stmt.setInt(4, ic_number);
-            stmt.setInt(5, staffId);
+            stmt.setString(1, employee.getFirstName());
+            stmt.setString(2, employee.getLastName());
+            stmt.setString(3, employee.getPhoneNumber());
+            stmt.setString(4, employee.getIcNumber());
+            stmt.setInt(5, employee.getStaffid());
             int rowsUpdated = stmt.executeUpdate();
             return rowsUpdated > 0;
         } catch (SQLException e) {
@@ -110,30 +110,30 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
     }
 
     // @Override
-    public boolean addOrUpdateFamilyDetails(int staffId, String personName, String relation, String contact) throws RemoteException {
+    public boolean addOrUpdateFamilyDetails(Family family, int staffID) throws RemoteException {
         try {
             String checkQuery = "SELECT COUNT(*) FROM Family WHERE staffid = ?";
             PreparedStatement checkStmt = conn.prepareStatement(checkQuery);
-            checkStmt.setInt(1, staffId);
+            checkStmt.setInt(1, staffID);
             ResultSet rs = checkStmt.executeQuery();
 
             if (rs.next() && rs.getInt(1) > 0) {
                 // Update existing record
                 String updateQuery = "UPDATE Family SET guardian_name = ?, relationship = ?, guardian_contact = ? WHERE staffid = ?";
                 PreparedStatement updateStmt = conn.prepareStatement(updateQuery);
-                updateStmt.setString(1, personName);
-                updateStmt.setString(2, relation);
-                updateStmt.setString(3, contact);
-                updateStmt.setInt(4, staffId);
+                updateStmt.setString(1, family.getGuardianName());
+                updateStmt.setString(2, family.getRelationship());
+                updateStmt.setString(3, family.getGuardianContact());
+                updateStmt.setInt(4, staffID);
                 return updateStmt.executeUpdate() > 0;
             } else {
                 // Insert new record
                 String insertQuery = "INSERT INTO Family (staffid, guardian_name, relationship, guardian_contact) VALUES (?, ?, ?, ?)";
                 PreparedStatement insertStmt = conn.prepareStatement(insertQuery);
-                insertStmt.setInt(1, staffId);
-                insertStmt.setString(2, personName);
-                insertStmt.setString(3, relation);
-                insertStmt.setString(4, contact);
+                insertStmt.setInt(1, staffID);
+                insertStmt.setString(2, family.getGuardianName());
+                insertStmt.setString(3, family.getRelationship());
+                insertStmt.setString(4, family.getGuardianContact());
                 return insertStmt.executeUpdate() > 0;
             }
 
@@ -144,18 +144,18 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
     }
 
     // @Override
-    public boolean applyLeave(int staffId, String reason_of_leave, double duration_of_leave, Date leave_date) throws RemoteException {
+    public boolean applyLeave(LeaveRecord leave, int staffID) throws RemoteException {
         try {
             // Check if employee has enough leave balance
             String checkLeaveQuery = "SELECT leave_available FROM Employee WHERE staffid = ?";
             PreparedStatement checkStmt = conn.prepareStatement(checkLeaveQuery);
-            checkStmt.setInt(1, staffId);
+            checkStmt.setInt(1, staffID);
             ResultSet rs = checkStmt.executeQuery();
 
             if (rs.next()) {
                 double leaveBalance = rs.getDouble("leave_available");
 
-                if (leaveBalance < duration_of_leave) {
+                if (leaveBalance < leave.getDurationOfLeave()) {
                     System.out.println("Insufficient leave balance!");
                     return false;  // Reject leave application due to insufficient balance
                 }
@@ -164,10 +164,10 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
                 String insertQuery = "INSERT INTO LeaveRecord (reason_of_leave, duration_of_leave, status, leave_date, staffid) VALUES (?, ?, 'PENDING', ?, ?)";
                 PreparedStatement stmt = conn.prepareStatement(insertQuery);
 
-                stmt.setString(1, reason_of_leave);
-                stmt.setDouble(2, duration_of_leave);
-                stmt.setDate(3, new java.sql.Date(leave_date.getTime()));
-                stmt.setInt(4, staffId);
+                stmt.setString(1, leave.getReasonOfLeave());
+                stmt.setDouble(2, leave.getDurationOfLeave());
+                stmt.setDate(3, new java.sql.Date(leave.getLeaveDate().getTime()));
+                stmt.setInt(4, staffID);
 
                 int rowsInserted = stmt.executeUpdate();
 
@@ -222,34 +222,61 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
     }
 
     // @Override
-    public String displayEmployeeProfile(int staffId) throws RemoteException {
+    public Employee getEmployeeProfile(int staffId) throws RemoteException {
         try {
-            String query = "SELECT first_name, last_name, ic_number, leave_available, phone_number "
+            String query = "SELECT staffid, first_name, last_name, ic_number, leave_available, phone_number "
                     + "FROM Employee WHERE staffid = ?";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setInt(1, staffId);
             ResultSet rs = stmt.executeQuery();
 
             if (rs.next()) {
-                StringBuilder profile = new StringBuilder();
-                profile.append("\n=== Employee Profile ===\n")
-                        .append("Staff ID: ").append(staffId).append("\n")
-                        .append("First Name: ").append(rs.getString("first_name")).append("\n")
-                        .append("Last Name: ").append(rs.getString("last_name")).append("\n")
-                        .append("IC Number: ").append(rs.getString("ic_number")).append("\n")
-                        .append("Leave Available: ").append(rs.getDouble("leave_available")).append(" day(s)\n")
-                        .append("Phone Number: ").append(rs.getString("phone_number")).append("\n")
-                        .append("----------------------------\n");
-
-                return profile.toString(); // Return the formatted string
+                return new Employee(
+                        rs.getInt("staffid"),
+                        rs.getString("first_name"),
+                        rs.getString("last_name"),
+                        rs.getString("ic_number"),
+                        rs.getDouble("leave_available"),
+                        rs.getString("phone_number")
+                );
             } else {
-                return "No profile found for Staff ID: " + staffId;
+                return null; // No employee found
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
-            return "No profile found for Staff ID: " + staffId;
+            throw new RemoteException("Error retrieving employee profile", e);
         }
+    }
+    
+    @Override
+    public List<LeaveRecord> getLeaveStatus(int staffId) throws RemoteException {
+        List<LeaveRecord> leaveRecords = new ArrayList<>();
+
+        try {
+            String query = "SELECT leaveRecordID, reason_of_leave, duration_of_leave, status, leave_date " +
+                           "FROM LeaveRecord WHERE staffid = ?";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setInt(1, staffId);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                int leaveRecordID = rs.getInt("leaveRecordID");
+                String reasonOfLeave = rs.getString("reason_of_leave");
+                double durationOfLeave = rs.getDouble("duration_of_leave");
+                String status = rs.getString("status");
+                Date leaveDate = rs.getDate("leave_date");
+
+                // Create a LeaveRecord object and add it to the list
+                LeaveRecord leaveRecord = new LeaveRecord(leaveRecordID, reasonOfLeave, durationOfLeave, status, leaveDate, staffId);
+                leaveRecords.add(leaveRecord);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return leaveRecords;
     }
 
     // @Override
@@ -288,7 +315,7 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
             return false;
         }
     }
-   
+
 //    public boolean approveLeave(int leaveRecordId, String status) throws RemoteException {
 //        return executorService.submit(() -> {
 //            try {
@@ -362,17 +389,16 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
 //            }
 //        }).get();
 //    }
-
     public boolean approveLeave(int leaveRecordId, String status) throws RemoteException {
         Future<Boolean> future = executorService.submit(() -> {
             try {
                 conn.setAutoCommit(false); // Start transaction
 
                 // Retrieve leave record details
-                String query = "SELECT lr.staffid, lr.duration_of_leave, lr.status, e.leave_available " +
-                               "FROM LeaveRecord lr " +
-                               "JOIN Employee e ON lr.staffid = e.staffid " +
-                               "WHERE lr.leaveRecordID = ?";
+                String query = "SELECT lr.staffid, lr.duration_of_leave, lr.status, e.leave_available "
+                        + "FROM LeaveRecord lr "
+                        + "JOIN Employee e ON lr.staffid = e.staffid "
+                        + "WHERE lr.leaveRecordID = ?";
                 try (PreparedStatement stmt = conn.prepareStatement(query)) {
                     stmt.setInt(1, leaveRecordId);
                     ResultSet rs = stmt.executeQuery();
@@ -438,7 +464,6 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
     }
 
 //    
-    
     public String generateYearlyReport(int staffId, int year) throws RemoteException {
         Future<String> future = executorService.submit(() -> {
             StringBuilder report = new StringBuilder();
@@ -457,16 +482,16 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
                         String lastName = empRs.getString("last_name");
 
                         // Query to get leave records for the given year
-                        String leaveQuery = "SELECT leaveRecordID, leave_date, duration_of_leave, reason_of_leave, status " +
-                                            "FROM LeaveRecord WHERE staffid = ? AND YEAR(leave_date) = ? " +
-                                            "ORDER BY leave_date";
+                        String leaveQuery = "SELECT leaveRecordID, leave_date, duration_of_leave, reason_of_leave, status "
+                                + "FROM LeaveRecord WHERE staffid = ? AND YEAR(leave_date) = ? "
+                                + "ORDER BY leave_date";
                         try (PreparedStatement leaveStmt = conn.prepareStatement(leaveQuery)) {
                             leaveStmt.setInt(1, staffId);
                             leaveStmt.setInt(2, year);
 
                             try (ResultSet leaveRs = leaveStmt.executeQuery()) {
-                                report.append(String.format("Yearly Leave Report for %s %s (Staff ID: %d)\n", 
-                                                            firstName, lastName, staffId));
+                                report.append(String.format("Yearly Leave Report for %s %s (Staff ID: %d)\n",
+                                        firstName, lastName, staffId));
                                 report.append(String.format("Year: %d\n\n", year));
 
                                 double totalApproved = 0;
@@ -483,9 +508,15 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
                                     double duration = leaveRs.getDouble("duration_of_leave");
                                     String status = leaveRs.getString("status");
                                     switch (status) {
-                                        case "APPROVED": totalApproved += duration; break;
-                                        case "PENDING": totalPending += duration; break;
-                                        case "REJECTED": totalRejected += duration; break;
+                                        case "APPROVED":
+                                            totalApproved += duration;
+                                            break;
+                                        case "PENDING":
+                                            totalPending += duration;
+                                            break;
+                                        case "REJECTED":
+                                            totalRejected += duration;
+                                            break;
                                     }
                                 }
 
@@ -564,65 +595,64 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService{
 //            }
 //        }).get();
 //    }
-    
+    @Override
     public boolean removeEmployee(int staffId) throws RemoteException {
-    Future<Boolean> future = executorService.submit(() -> {
-        try {
-            conn.setAutoCommit(false); // Start transaction
+        Future<Boolean> future = executorService.submit(() -> {
+            try {
+                conn.setAutoCommit(false); // Start transaction
 
-            // Check if the employee exists
-            String checkQuery = "SELECT staffid FROM Employee WHERE staffid = ?";
-            try (PreparedStatement checkStmt = conn.prepareStatement(checkQuery)) {
-                checkStmt.setInt(1, staffId);
-                try (ResultSet rs = checkStmt.executeQuery()) {
-                    if (!rs.next()) {
-                        conn.rollback();
-                        return false; // Employee not found
+                // Check if the employee exists
+                String checkQuery = "SELECT staffid FROM Employee WHERE staffid = ?";
+                try (PreparedStatement checkStmt = conn.prepareStatement(checkQuery)) {
+                    checkStmt.setInt(1, staffId);
+                    try (ResultSet rs = checkStmt.executeQuery()) {
+                        if (!rs.next()) {
+                            conn.rollback();
+                            return false; // Employee not found
+                        }
                     }
                 }
-            }
 
-            // Delete employee (ON DELETE CASCADE handles dependent tables)
-            String deleteQuery = "DELETE FROM Employee WHERE staffid = ?";
-            try (PreparedStatement deleteStmt = conn.prepareStatement(deleteQuery)) {
-                deleteStmt.setInt(1, staffId);
-                int rowsDeleted = deleteStmt.executeUpdate();
+                // Delete employee (ON DELETE CASCADE handles dependent tables)
+                String deleteQuery = "DELETE FROM Employee WHERE staffid = ?";
+                try (PreparedStatement deleteStmt = conn.prepareStatement(deleteQuery)) {
+                    deleteStmt.setInt(1, staffId);
+                    int rowsDeleted = deleteStmt.executeUpdate();
 
-                if (rowsDeleted > 0) {
-                    conn.commit();
-                    return true;
-                } else {
+                    if (rowsDeleted > 0) {
+                        conn.commit();
+                        return true;
+                    } else {
+                        conn.rollback();
+                        return false;
+                    }
+                }
+
+            } catch (SQLException e) {
+                try {
                     conn.rollback();
-                    return false;
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+                e.printStackTrace();
+                return false;
+            } finally {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException e) {
+                    e.printStackTrace();
                 }
             }
+        });
 
-        } catch (SQLException e) {
-            try {
-                conn.rollback();
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-            }
+        try {
+            return future.get(); // Retrieve result from asynchronous execution
+        } catch (Exception e) {
             e.printStackTrace();
             return false;
-        } finally {
-            try {
-                conn.setAutoCommit(true);
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
         }
-    });
-
-    try {
-        return future.get(); // Retrieve result from asynchronous execution
-    } catch (Exception e) {
-        e.printStackTrace();
-        return false;
     }
-}
 
-    
     //@Override
     public void finalize() {
         executorService.shutdown();
