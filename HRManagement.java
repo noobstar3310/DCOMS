@@ -1,5 +1,6 @@
 package dcomsassignment;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 
@@ -16,8 +17,7 @@ public class HRManagement {
         System.out.println("1. Register New Employee");
         System.out.println("2. Manage Leave Applications");
         System.out.println("3. Generate Yearly Leave Report");
-        System.out.println("4. Remove Employee");
-        System.out.println("5. Exit");
+        System.out.println("4. Exit");
     }
 
     public void handleChoice(int choice) throws Exception {
@@ -32,9 +32,6 @@ public class HRManagement {
                 generateYearlyReport();
                 break;
             case 4:
-                removeEmployee();
-                break;
-            case 5:
                 break;
             default:
                 System.out.println("Invalid choice. Please try again.");
@@ -72,19 +69,32 @@ public class HRManagement {
 
     private void manageLeaveApplications() throws Exception {
         System.out.println("\n=== Manage Leave Applications ===");
-        System.out.print("Enter Staff ID to view their leave applications: ");
+
+        // 1. Show which staff members have at least one pending leave
+        List<Integer> pendingStaffIds = service.getStaffIdsWithPendingLeaves();
+        if (pendingStaffIds.isEmpty()) {
+            System.out.println("No staff members have pending leaves at the moment.");
+            return;
+        }
+
+        System.out.println("Staff members with pending leaves:");
+        for (Integer id : pendingStaffIds) {
+            System.out.println(" - " + id);
+        }
+
+        // 2. Now ask the user which staff ID they want to manage
+        System.out.print("\nEnter Staff ID to view or manage leave applications: ");
         int staffId = scanner.nextInt();
         scanner.nextLine(); // Consume the newline character
 
-        // Display leave status for the given staff ID
+        // Display leave status for the chosen staff ID
         List<LeaveRecord> leaveRecords = service.getLeaveStatus(staffId);
-
         if (leaveRecords.isEmpty()) {
             System.out.println("No leave applications found for Staff ID: " + staffId);
             return;
         }
 
-        // Display leave records
+        // 3. Show the leave records for the chosen staff
         System.out.println("\nLeave Applications for Staff ID: " + staffId);
         for (LeaveRecord record : leaveRecords) {
             System.out.println("Leave ID: " + record.getLeaveRecordID());
@@ -95,44 +105,42 @@ public class HRManagement {
             System.out.println("----------------------------");
         }
 
+        // 4. Ask which specific leave record to approve or reject
         System.out.print("Enter Leave Record ID to approve/reject (0 to cancel): ");
         int leaveId = scanner.nextInt();
-        scanner.nextLine(); // Consume the newline character
+        scanner.nextLine(); // Consume the newline
 
-        if (leaveId > 0) {
-            // Check if the leave ID is valid for the given staff ID
-            boolean validLeaveId = false;
-            for (LeaveRecord record : leaveRecords) {
-                if (record.getLeaveRecordID() == leaveId) {
-                    validLeaveId = true;
-                    break;
-                }
-            }
-
-            if (!validLeaveId) {
-                System.out.println("Invalid Leave Record ID for Staff ID: " + staffId);
-                return;
-            }
-
-            System.out.println("1. Approve");
-            System.out.println("2. Reject");
-            System.out.print("Enter choice: ");
-            int decision = scanner.nextInt();
-            scanner.nextLine(); // Consume the newline character
-
-            String status = (decision == 1) ? "APPROVED" : "REJECTED";
-
-            // Call the approveLeave method to update the leave status
-            boolean success = service.approveLeave(leaveId, status);
-
-            if (success) {
-                System.out.println("Leave application " + status + " successfully.");
-            } else {
-                System.out.println("Failed to update leave application status.");
-            }
-        } else {
+        if (leaveId <= 0) {
             System.out.println("Operation canceled.");
+            return;
         }
+
+        // Check if the chosen leave ID is valid for this staff
+        boolean validLeaveId = false;
+        for (LeaveRecord record : leaveRecords) {
+            if (record.getLeaveRecordID() == leaveId) {
+                validLeaveId = true;
+                break;
+            }
+        }
+
+        if (!validLeaveId) {
+            System.out.println("Invalid Leave Record ID for Staff ID: " + staffId);
+            return;
+        }
+
+        // 5. Approve or reject
+        System.out.println("1. Approve");
+        System.out.println("2. Reject");
+        System.out.print("Enter choice: ");
+        int decision = scanner.nextInt();
+        scanner.nextLine(); // consume newline
+
+        String status = (decision == 1) ? "APPROVED" : "REJECTED";
+        boolean success = service.approveLeave(leaveId, status);
+        System.out.println(success
+                ? "Leave application " + status + " successfully."
+                : "Failed to update leave application status.");
     }
 
     private void generateYearlyReport() throws Exception {
@@ -141,18 +149,30 @@ public class HRManagement {
         int staffId = scanner.nextInt();
         System.out.print("Enter Year (YYYY): ");
         int year = scanner.nextInt();
-        scanner.nextLine();
+        scanner.nextLine(); // consume leftover newline
 
+        // Retrieve all leave records for the staff
         List<LeaveRecord> leaveRecords = service.getLeaveStatus(staffId);
 
-        if (leaveRecords.isEmpty()) {
-            System.out.println("No leave applications found for Staff ID: " + staffId);
+        // Filter records to only include those matching the specified year
+        List<LeaveRecord> filteredRecords = new ArrayList<>();
+        for (LeaveRecord record : leaveRecords) {
+            // Using Java 8+ approach: convert java.sql.Date to LocalDate and compare year
+            int recordYear = record.getLeaveDate().toLocalDate().getYear();
+            if (recordYear == year) {
+                filteredRecords.add(record);
+            }
+        }
+
+        // Check if we found any matching records
+        if (filteredRecords.isEmpty()) {
+            System.out.printf("No leave applications found for Staff ID %d in year %d.\n", staffId, year);
             return;
         }
 
-        // Display leave records
-        System.out.println("\nLeave Applications for Staff ID: " + staffId);
-        for (LeaveRecord record : leaveRecords) {
+        // Display the filtered records
+        System.out.printf("\nLeave Applications for Staff ID %d in year %d:\n", staffId, year);
+        for (LeaveRecord record : filteredRecords) {
             System.out.println("Leave ID: " + record.getLeaveRecordID());
             System.out.println("Reason: " + record.getReasonOfLeave());
             System.out.println("Duration: " + record.getDurationOfLeave() + " days");

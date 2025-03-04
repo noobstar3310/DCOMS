@@ -56,7 +56,7 @@ public class HRMClient {
             int choice = scanner.nextInt();
             scanner.nextLine();
 
-            if (choice == 5) {
+            if (choice == 6) {
                 System.out.println("Thank you for using the system. Goodbye!");
                 break;
             }
@@ -83,7 +83,7 @@ public class HRMClient {
             int choice = scanner.nextInt();
             scanner.nextLine();
 
-            if (choice == 5) {
+            if (choice == 4) {
                 System.out.println("Thank you for using the system. Goodbye!");
                 break;
             }

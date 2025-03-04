@@ -248,14 +248,14 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService {
             throw new RemoteException("Error retrieving employee profile", e);
         }
     }
-    
+
     @Override
     public List<LeaveRecord> getLeaveStatus(int staffId) throws RemoteException {
         List<LeaveRecord> leaveRecords = new ArrayList<>();
 
         try {
-            String query = "SELECT leaveRecordID, reason_of_leave, duration_of_leave, status, leave_date " +
-                           "FROM LeaveRecord WHERE staffid = ?";
+            String query = "SELECT leaveRecordID, reason_of_leave, duration_of_leave, status, leave_date "
+                    + "FROM LeaveRecord WHERE staffid = ?";
             PreparedStatement stmt = conn.prepareStatement(query);
             stmt.setInt(1, staffId);
             ResultSet rs = stmt.executeQuery();
@@ -663,5 +663,23 @@ public class HRMServiceImpl extends UnicastRemoteObject implements HRMService {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public List<Integer> getStaffIdsWithPendingLeaves() throws RemoteException {
+        List<Integer> staffIds = new ArrayList<>();
+        String query = "SELECT DISTINCT staffid FROM LeaveRecord WHERE status = 'PENDING'";
+
+        try (PreparedStatement stmt = conn.prepareStatement(query);
+                ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                staffIds.add(rs.getInt("staffid"));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return staffIds;
     }
 }

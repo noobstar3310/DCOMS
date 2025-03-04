@@ -27,4 +27,5 @@ public interface HRMService extends Remote {
     
     // Reporting
     String generateYearlyReport(int staffId, int year) throws RemoteException;
+    List<Integer> getStaffIdsWithPendingLeaves() throws RemoteException;
 }

@@ -1,6 +1,7 @@
 package dcomsassignment;
 
 import java.sql.Date;
+import java.util.List;
 import java.util.Scanner;
 
 public class EmployeeManagement {
@@ -19,7 +20,8 @@ public class EmployeeManagement {
         System.out.println("2. Add/Update Family Details");
         System.out.println("3. View Leave Balance");
         System.out.println("4. Apply for Leave");
-        System.out.println("5. Exit");
+        System.out.println("5. View leave application status");
+        System.out.println("6. Exit");
     }
 
     public void handleChoice(int choice) throws Exception {
@@ -37,6 +39,9 @@ public class EmployeeManagement {
                 applyForLeave();
                 break;
             case 5:
+                viewLeaveStatus();
+                break;
+            case 6:
                 break;
             default:
                 System.out.println("Invalid choice. Please try again.");
@@ -125,21 +130,46 @@ public class EmployeeManagement {
 
     private void applyForLeave() throws Exception {
         LeaveRecord leave = new LeaveRecord();
+
         System.out.print("Enter reason for leave: ");
         leave.setReasonOfLeave(scanner.nextLine());
 
         System.out.print("Enter duration (in days): ");
         leave.setDurationOfLeave(scanner.nextDouble());
 
+        // Consume the leftover newline so the next input is read correctly
+        scanner.nextLine();
+
         System.out.print("Enter leave date (YYYY-MM-DD): ");
         String dateStr = scanner.nextLine();
 
         try {
             leave.setLeaveDate(Date.valueOf(dateStr));
-            boolean applied = service.applyLeave(leave,staffId);
+            boolean applied = service.applyLeave(leave, staffId);
             System.out.println(applied ? "Leave application submitted successfully!" : "Leave application failed.");
         } catch (IllegalArgumentException e) {
             System.out.println("Invalid date format. Please use YYYY-MM-DD format.");
+        }
+    }
+    
+    private void viewLeaveStatus() throws Exception {
+
+        List<LeaveRecord> leaveRecords = service.getLeaveStatus(staffId);
+
+        if (leaveRecords.isEmpty()) {
+            System.out.println("You have no leave application!");
+            return;
+        }
+
+        // Display leave records
+        System.out.println("\nLeave Applications");
+        for (LeaveRecord record : leaveRecords) {
+            System.out.println("Leave ID: " + record.getLeaveRecordID());
+            System.out.println("Reason: " + record.getReasonOfLeave());
+            System.out.println("Duration: " + record.getDurationOfLeave() + " days");
+            System.out.println("Status: " + record.getStatus());
+            System.out.println("Date: " + record.getLeaveDate());
+            System.out.println("----------------------------");
         }
     }
 }
