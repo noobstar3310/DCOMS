@@ -15,7 +15,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-public class HRMServiceImpl extends UnicastRemoteObject implements HRMService {
+public class HRMServiceImpl implements HRMService {
 //    private Connection conn;
 //
 //    public HRMServiceImpl(Connection conn) throws RemoteException {
